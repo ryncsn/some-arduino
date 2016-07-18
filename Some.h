@@ -34,7 +34,7 @@
 #define DPrintln(x)
 #endif
 
-#ifdef SOME_DEBUG
+#ifdef SOME_ERROR
 #define EPrint(x) Serial.print(x)
 #define EPrintln(x) Serial.println(x)
 #else
@@ -42,7 +42,7 @@
 #define EPrintln(x)
 #endif
 
-#ifndef RF24_HOST_ADDR 
+#ifndef RF24_HOST_ADDR
 #define RF24_HOST_ADDR 0xABCD000000
 #endif
 
@@ -86,7 +86,7 @@ class OpHandler {
 		OpHandler(const char* op, HandleFunction func):
 			op(op),
 			func(func),
-			next(NULL) 
+			next(NULL)
 		{
 		}
 };
@@ -270,7 +270,7 @@ class link_RF24 {
 			_radio.enableDynamicAck();			//EN_DYN_ACK
 			_radio.enableDynamicPayloads();		//EN_DPL
 
-			//Setup channel, 
+			//Setup channel
 			_radio.setChannel(100);
 			_radio.setDataRate(RF24_250KBPS);
 			_radio.setPALevel(RF24_PA_MAX);
@@ -293,7 +293,7 @@ class link_RF24 {
 				uint8_t dpl_len = _radio.getDynamicPayloadSize();
 				if(dpl_len < 1){
 					DPrintln("RF24 receive: Empty package, skip.");
-					return 0; 
+					return 0;
 				}
 
 				//Remaining buffer have to be able to contain this payload plus
@@ -306,7 +306,7 @@ class link_RF24 {
 
 				_radio.read(_buffer + _buffer_len, dpl_len);
 				_buffer_len += dpl_len;
-				if (dpl_len == sizeof(RF24_END) 
+				if (dpl_len == sizeof(RF24_END)
 						&& memcmp(_buffer + _buffer_len, RF24_END, sizeof(RF24_END)) == 0){
 					DPrintln("RF24 receive: Got end package.");
 					uint32_t len = _buffer_len;
