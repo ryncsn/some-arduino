@@ -73,6 +73,33 @@
 #include <ArduinoJson.h>
 #include "RF24.h"
 
+
+#ifndef WD_SLEEP_MS
+#define WD_SLEEP_MS 8000
+#endif
+
+#if(WD_SLEEP_MS == 500)
+#define WDT_REG bit (WDIE) | bit (WDP2) | bit (WDP0);
+#endif
+#if(WD_SLEEP_MS == 4000)
+#define WDT_REG bit (WDIE) | bit (WDP3);
+#endif
+#if(WD_SLEEP_MS == 8000)
+#define WDT_REG bit (WDIE) | bit (WDP3) | bit (WDP0);
+#endif
+
+#ifdef WATCH_DOG_SLEEP
+#include <avr/wdt.h>
+#include <avr/sleep.h>
+
+//Watchdog timer, always in RAM
+volatile uint32_t _wd_count = 0;
+
+ISR (WDT_vect) {
+	_wd_count ++;
+}
+#endif
+
 static const byte RF24_END[RF24_MAX_LEN] = {0};
 
 typedef void (*HandleFunction)(void);
@@ -225,6 +252,43 @@ class Thing {
 		void sleep(){
 			_link -> sleep();
 		}
+
+#ifdef WATCH_DOG_SLEEP
+		//Sleep in ms.
+		void deep_sleep(uint32_t time){
+			_link -> sleep();
+			uint32_t target_time = (time + WD_SLEEP_MS - 1) / WD_SLEEP_MS; //Up Rounding
+
+			ADCSRA = 0;
+			// clear various "reset" flags
+			MCUSR = 0;
+			// allow changes, disable reset
+			WDTCSR = bit (WDCE) | bit (WDE);
+			// set interrupt mode and an interval
+			WDTCSR = WDT_REG;    // set WDIE, and 8 second delay
+			wdt_reset();  // pat the dog
+
+			set_sleep_mode (SLEEP_MODE_STANDBY);
+
+			noInterrupts();           // timed sequence follows
+			sleep_enable();
+
+			// turn off brown-out enable in software
+			MCUCR = bit (BODS) | bit (BODSE);
+			MCUCR = bit (BODS);
+			interrupts ();             // guarantees next instruction executed
+
+			_wd_count = 0;
+			while(_wd_count < target_time){
+				sleep_cpu (); //Sleep and wait for Interuput
+			}
+			wdt_disable();
+
+			// cancel sleep as a precaution
+			sleep_disable();
+			this->wakeup();
+		}
+#endif
 
 		void wakeup(){
 			_link -> wakeup();

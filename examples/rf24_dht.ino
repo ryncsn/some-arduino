@@ -1,18 +1,18 @@
 #define RF24_ADDR 0xFFFF000002
-#define SOME_DEBUG
-#define SOME_ERROR
 
 #define DHTPIN 2
 #define DHTTYPE DHT11
+#define WATCH_DOG_SLEEP
 
 #include "DHT.h"
 
+#include <avr/sleep.h>
+#include <avr/wdt.h>
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 #include <SPI.h>
 #include "printf.h"
 #include "Some.h"
-#include "LowPower.h"
 
 Thing<link_RF24> me(0,
                     "{\"name\":\"温湿度传感器\",\"groups\":{\"smart\":{\"alwaysOn\":true,\"heartBeat\":false},\"air-th\":{}}}");
@@ -20,11 +20,15 @@ Thing<link_RF24> me(0,
 DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
-  Serial.begin(115200);
-  printf_begin();
-  Serial.println("setup!");
+  //Serial.begin(115200);
+  //printf_begin();
+  //Serial.println("setup!");
   me.setup();
   dht.begin();
+  
+  // disable ADC
+  // works better when set during setup?
+  ADCSRA = 0;
 }
 
 void init_loop(void) {
@@ -48,15 +52,13 @@ void loop(void) {
   int td = (int)t;
   int tp = (int)(t * 10.0) % 10;
   if (isnan(h) || isnan(t)) {
-    Serial.println("Failed to read from DHT sensor!");
+    //Serial.println("Failed to read from DHT sensor!");
   }
 
   char buff[64];
   sprintf((char*)buff, "{\"temp\":%d.%d,\"hum\":%d.%d}", td, tp, hd, hp);
 
-  me.wakeup();
   me.send(buff);
-  me.sleep();
-  delay(3600000UL); //One hour
+  me.deep_sleep(2800000); //sleep 46 min
 }
 
