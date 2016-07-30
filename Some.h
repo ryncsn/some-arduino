@@ -281,7 +281,6 @@ class link_RF24 {
 			_radio.openWritingPipe(RF24_HOST_ADDR);
 
 			_radio.startListening();
-			_radio.printDetails();
 		}
 
 		byte* getBuffer(){
@@ -362,11 +361,15 @@ class link_RF24 {
 		}
 
 		void sleep(){
+			_radio.setPALevel(RF24_PA_MIN);
+			_radio.stopListening();
 			_radio.powerDown();
 		}
 
 		void wakeup(){
 			_radio.powerUp();
+			_radio.startListening();
+			_radio.setPALevel(RF24_PA_MIN);
 		}
 };
 
