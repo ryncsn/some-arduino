@@ -45,6 +45,7 @@ void init_loop(void) {
 
 void loop(void) {
   init_loop();
+  dht.begin();
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   int hd = (int)h;
